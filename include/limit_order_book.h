@@ -26,24 +26,79 @@ public:
         order_map.reserve(1000000);
     }
 
-    // Basic Add Order Logic (Resting in the book)
+    // O(log n) Matching and Routing Logic
     void add_order(uint64_t order_id, uint64_t price, uint32_t quantity, Side side) {
-        // Grab a pre-allocated order from the pool in O(1) time
-        Order* new_order = order_pool.allocate();
-        new_order->order_id = order_id;
-        new_order->price = price;
-        new_order->quantity = quantity;
-        new_order->side = side;
-
-        // Add to the correct Red-Black tree and Intrusive Queue
+        
+        // 1. MATCHING ENGINE LOGIC (Crossing the spread)
         if (side == Side::BUY) {
-            bids[price].push_back(new_order);
+            // While we have quantity to buy, AND there are asks available, 
+            // AND the best ask price is less than or equal to our buy price
+            while (quantity > 0 && !asks.empty() && asks.begin()->first <= price) {
+                auto best_ask_iter = asks.begin();
+                OrderQueue& best_ask_queue = best_ask_iter->second;
+                Order* resting_ask = best_ask_queue.get_head();
+
+                // Trade at the resting order's quantity or our remaining quantity, whichever is smaller
+                uint32_t trade_qty = std::min(quantity, resting_ask->quantity);
+                
+                // Execute Trade (In a real system, a TCP execution message is sent to clients here)
+                quantity -= trade_qty;
+                resting_ask->quantity -= trade_qty;
+
+                // If the resting order is fully filled, remove it from the queue and memory pool
+                if (resting_ask->quantity == 0) {
+                    best_ask_queue.erase(resting_ask);
+                    order_map.erase(resting_ask->order_id);
+                    order_pool.deallocate(resting_ask);
+                }
+
+                // If the price level queue is empty, remove the price level entirely
+                if (best_ask_queue.is_empty()) {
+                    asks.erase(best_ask_iter);
+                }
+            }
         } else {
-            asks[price].push_back(new_order);
+            // SELL LOGIC: Match against Bids
+            // While we have quantity to sell, AND there are bids available,
+            // AND the best bid price is greater than or equal to our sell price
+            while (quantity > 0 && !bids.empty() && bids.begin()->first >= price) {
+                auto best_bid_iter = bids.begin();
+                OrderQueue& best_bid_queue = best_bid_iter->second;
+                Order* resting_bid = best_bid_queue.get_head();
+
+                uint32_t trade_qty = std::min(quantity, resting_bid->quantity);
+                
+                quantity -= trade_qty;
+                resting_bid->quantity -= trade_qty;
+
+                if (resting_bid->quantity == 0) {
+                    best_bid_queue.erase(resting_bid);
+                    order_map.erase(resting_bid->order_id);
+                    order_pool.deallocate(resting_bid);
+                }
+
+                if (best_bid_queue.is_empty()) {
+                    bids.erase(best_bid_iter);
+                }
+            }
         }
 
-        // Store in the hash map for instant future lookups
-        order_map[order_id] = new_order;
+        // 2. ADD REMAINING LIQUIDITY TO THE BOOK
+        // If the incoming order wasn't fully filled by the matching engine, rest the remainder
+        if (quantity > 0) {
+            Order* new_order = order_pool.allocate();
+            new_order->order_id = order_id;
+            new_order->price = price;
+            new_order->quantity = quantity;
+            new_order->side = side;
+
+            if (side == Side::BUY) {
+                bids[price].push_back(new_order);
+            } else {
+                asks[price].push_back(new_order);
+            }
+            order_map[order_id] = new_order;
+        }
     }
 
     // O(1) Cancel Order Logic
