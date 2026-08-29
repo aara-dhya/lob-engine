@@ -24,7 +24,7 @@ This project uses CMake as its build system and requires a compiler supporting C
 
 ```bash
 # Clone the repository
-git clone [https://github.com/yourusername/lob_engine.git](https://github.com/yourusername/lob_engine.git)
+git clone [https://github.com/yourusername/lob-engine.git](https://github.com/aara-dhya/lob-engine.git)
 cd lob_engine
 
 # Generate the build system and compile
