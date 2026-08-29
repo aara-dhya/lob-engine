@@ -1,12 +1,22 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 project(LimitOrderBook VERSION 1.0)
 
-# Enforce C++17 standard for modern features and performance
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Include directories
 include_directories(include)
-
-# Add the main executable
 add_executable(lob_engine src/main.cpp)
+
+# Fetch Google Test automatically
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Add Test Executable
+add_executable(lob_tests tests/test_lob.cpp)
+target_link_libraries(lob_tests gtest_main)

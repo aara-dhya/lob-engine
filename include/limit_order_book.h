@@ -149,4 +149,13 @@ public:
         // If not, it goes to the BACK of the queue at the new price level.
         add_order(order_id, new_price, new_quantity, original_side);
     }
+
+    // Test Helpers to inspect the top of the book
+    uint64_t get_best_bid() const {
+        return bids.empty() ? 0 : bids.begin()->first;
+    }
+
+    uint64_t get_best_ask() const {
+        return asks.empty() ? 0 : asks.begin()->first;
+    }
 };
