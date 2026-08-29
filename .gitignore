@@ -1,0 +1,19 @@
+# CMake build artifacts
+build/
+out/
+bin/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Compiled binaries and object files
+*.o
+*.a
+*.so
+*.dylib
+*.exe
