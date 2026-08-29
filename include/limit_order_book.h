@@ -130,4 +130,23 @@ public:
         order_map.erase(it);
         order_pool.deallocate(order_to_cancel);
     }
+
+    // O(log n) Modify Order Logic (Cancel + Replace)
+    void modify_order(uint64_t order_id, uint64_t new_price, uint32_t new_quantity) {
+        // 1. O(1) Lookup to ensure the order exists and to grab its original side
+        auto it = order_map.find(order_id);
+        if (it == order_map.end()) {
+            return; // Order not found, nothing to modify
+        }
+        
+        Side original_side = it->second->side;
+        
+        // 2. Strict Cancel + Replace to manage queue priority loss
+        // The existing order is ripped out of its queue in O(1) time
+        cancel_order(order_id);
+        
+        // 3. The new order is injected. If the price crosses the spread, it executes immediately.
+        // If not, it goes to the BACK of the queue at the new price level.
+        add_order(order_id, new_price, new_quantity, original_side);
+    }
 };
